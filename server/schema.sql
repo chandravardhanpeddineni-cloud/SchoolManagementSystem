@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS teacher_classes (
 );
 CREATE TABLE IF NOT EXISTS attendance (
   id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL REFERENCES students(id),
-  teacher_id INTEGER NOT NULL REFERENCES users(id), attendance_date TEXT NOT NULL,
+  recorded_by INTEGER NOT NULL REFERENCES users(id), attendance_date TEXT NOT NULL,
   session TEXT NOT NULL DEFAULT 'Full day', status TEXT NOT NULL CHECK(status IN ('Present','Absent','Late')),
   UNIQUE(student_id,attendance_date,session)
 );

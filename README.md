@@ -94,7 +94,8 @@ All API routes use JSON. Authenticated routes use an HTTP-only, same-site sessio
 | `GET /api/classes` | Admin | List classes for student creation |
 | `POST /api/students` | Admin | Create `{name,admission_no,class_id,guardian_name,email}` |
 | `GET /api/attendance` | Signed in | Visible attendance records |
-| `POST /api/attendance` | Admin, teacher | `{student_id,date,session,status}` |
+| `POST /api/attendance` | Admin, teacher | `{student_id,date,session,status}` for authorized classes |
+| `POST /api/attendance` | Student | Self check-in; API always records the linked student as Present for today and rejects duplicates |
 | `GET /api/exams` | Signed in | Visible exams and permitted results |
 | `POST /api/results` | Admin, teacher | `{exam_id,student_id,marks}`; upserts grade |
 | `GET /api/fees` | Signed in | Visible invoices with paid and due cents |
@@ -113,7 +114,7 @@ Attendance duplicates return HTTP 409. Payments run inside a transaction, reject
 npm test
 ```
 
-Integration tests use a temporary SQLite database and a local HTTP server, so they do not require MySQL. They cover teacher scope, duplicate attendance conflict, grade calculation, student privacy, and fee balance reconciliation. Configure `.env` before running the app to connect it to MySQL.
+Integration tests use a temporary SQLite database and a local HTTP server, so they do not require MySQL. They cover teacher scope, staff and student attendance conflicts, grade calculation, student privacy, and fee balance reconciliation. Configure `.env` before running the app to connect it to MySQL.
 
 ## Known limitations
 

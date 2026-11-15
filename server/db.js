@@ -124,6 +124,12 @@ async function initializeMysql() {
     const checkNames = new Set(checks.map(row => row.CONSTRAINT_NAME));
     if (checkNames.has('chk_guardian_student')) await connection.query('ALTER TABLE users DROP CHECK chk_guardian_student');
     if (!checkNames.has('chk_student_link')) await connection.query("ALTER TABLE users ADD CONSTRAINT chk_student_link CHECK(role <> 'student' OR student_id IS NOT NULL)");
+    const [oldAttendanceColumn] = await connection.query("SHOW COLUMNS FROM attendance LIKE 'teacher_id'");
+    if (oldAttendanceColumn.length) {
+      await connection.query('ALTER TABLE attendance DROP FOREIGN KEY fk_attendance_teacher');
+      await connection.query('ALTER TABLE attendance CHANGE COLUMN teacher_id recorded_by INT UNSIGNED NOT NULL');
+      await connection.query('ALTER TABLE attendance ADD CONSTRAINT fk_attendance_recorder FOREIGN KEY(recorded_by) REFERENCES users(id)');
+    }
   } finally { connection.release(); }
   await seed();
 }

@@ -10,7 +10,7 @@ The application uses a same-origin JSON API and server-side session cookie. This
 
 MySQL is configured through `.env` (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_PORT`). The schema is maintained in `server/schema.mysql.sql`, has foreign keys and unique constraints, and is initialized on server startup. Synthetic demo records are seeded only for an empty database. Material actions write to `audit_log`. A SQLite fallback remains for integration tests when `DB_HOST` is unset.
 
-Attendance uniqueness is enforced by `(student_id, attendance_date, session)`. Results validate the exam class, teacher scope, and marks range before calculating a grade. Fee balances are calculated from invoice and payment rows; payment insertion and invoice status changes use a transaction and reject overpayments.
+Attendance uniqueness is enforced by `(student_id, attendance_date, session)`. Students can self-check in as Present for their own record for the current day; the API ignores any supplied student, status, or date values. Teachers can record assigned-class attendance. Results validate the exam class, teacher scope, and marks range before calculating a grade. Fee balances are calculated from invoice and payment rows; payment insertion and invoice status changes use a transaction and reject overpayments.
 
 ## Security and privacy
 
@@ -18,7 +18,7 @@ Passwords use bcrypt hashes. The application uses an HTTP-only, same-site sessio
 
 ## Verification
 
-`npm run build` completes successfully. The Node integration suite uses the SQLite test fallback and covers four scenarios: teacher class scope and duplicate attendance conflict; result grade and marks validation; administrator student creation and admission-number conflict; and student privacy with fee-ledger reconciliation. The live MySQL API health check and migrated student sign-in were verified.
+`npm run build` completes successfully. The Node integration suite uses the SQLite test fallback and covers five scenarios: teacher class scope and duplicate attendance conflict; student self-check-in and duplicate prevention; result grade and marks validation; administrator student creation and admission-number conflict; and student privacy with fee-ledger reconciliation. The live MySQL API health check and migrated student sign-in were verified.
 
 ## Current limits
 

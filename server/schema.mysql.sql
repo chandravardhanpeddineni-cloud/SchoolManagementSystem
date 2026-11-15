@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS teacher_classes (
-  teacher_id INT UNSIGNED NOT NULL,
+  recorded_by INT UNSIGNED NOT NULL,
   class_id INT UNSIGNED NOT NULL,
   PRIMARY KEY(teacher_id,class_id),
   CONSTRAINT fk_teacher_classes_user FOREIGN KEY(teacher_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS attendance (
   UNIQUE KEY uq_attendance_student_date_session (student_id,attendance_date,session),
   KEY idx_attendance_date (attendance_date),
   CONSTRAINT fk_attendance_student FOREIGN KEY(student_id) REFERENCES students(id),
-  CONSTRAINT fk_attendance_teacher FOREIGN KEY(teacher_id) REFERENCES users(id)
+  CONSTRAINT fk_attendance_recorder FOREIGN KEY(recorded_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS exams (

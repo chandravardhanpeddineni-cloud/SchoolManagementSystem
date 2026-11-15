@@ -49,6 +49,20 @@ test('assigned teacher can record attendance and duplicate is rejected',async()=
   assert.equal(duplicate.response.status,409);
 });
 
+test('student can check in as present only for their own record and today',async()=>{
+  await login('student','student@school.test');
+  const saved=await request('/api/attendance',{role:'student',method:'POST',body:{student_id:2,date:'2000-01-01',session:'Morning',status:'Absent'}});
+  assert.equal(saved.response.status,201);
+  const {data}=await request('/api/attendance',{role:'student'});
+  const todayRecords=data.records.filter(record=>record.attendance_date===new Date().toISOString().slice(0,10));
+  assert.equal(todayRecords.length,1);
+  assert.equal(todayRecords[0].student_id,1);
+  assert.equal(todayRecords[0].status,'Present');
+  assert.equal(todayRecords[0].session,'Full day');
+  const duplicate=await request('/api/attendance',{role:'student',method:'POST',body:{}});
+  assert.equal(duplicate.response.status,409);
+});
+
 test('result grades are computed from configured exam marks',async()=>{
   await login('teacher','teacher@school.test');
   const {data}=await request('/api/exams',{role:'teacher'});const exam=data.exams[0];

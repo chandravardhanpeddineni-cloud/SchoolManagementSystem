@@ -130,11 +130,12 @@ app.get('/api/attendance', auth, route(async (req, res) => {
   const records = await all(`SELECT a.*,s.name student_name,c.name||' - '||c.section class_name FROM attendance a JOIN students s ON s.id=a.student_id JOIN classes c ON c.id=s.class_id WHERE a.student_id IN (${ids.map(()=>'?').join(',')}) ORDER BY a.attendance_date DESC,a.id DESC LIMIT 100`, ...ids);
   res.json({ records });
 }));
-app.post('/api/attendance', auth, roles('admin', 'teacher'), route(async (req, res) => {
-  const studentId = Number(req.body?.student_id);
-  const date = String(req.body?.date || '');
-  const sessionName = String(req.body?.session || 'Full day');
-  const status = String(req.body?.status || '');
+app.post('/api/attendance', auth, roles('admin', 'teacher', 'student'), route(async (req, res) => {
+  const selfCheckIn = req.user.role === 'student';
+  const studentId = selfCheckIn ? Number(req.user.student_id) : Number(req.body?.student_id);
+  const date = selfCheckIn ? new Date().toISOString().slice(0, 10) : String(req.body?.date || '');
+  const sessionName = selfCheckIn ? 'Full day' : String(req.body?.session || 'Full day');
+  const status = selfCheckIn ? 'Present' : String(req.body?.status || '');
   if (!Number.isInteger(studentId) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !['Present', 'Absent', 'Late'].includes(status) || !sessionName.trim()) return error(res, 400, 'Provide a student, valid date, session, and attendance status.');
   const student = await get('SELECT id,class_id FROM students WHERE id=?', studentId);
   if (!student) return error(res, 404, 'Student not found.');
@@ -142,8 +143,8 @@ app.post('/api/attendance', auth, roles('admin', 'teacher'), route(async (req, r
   if (scope !== null && !scope.includes(Number(student.class_id))) return error(res, 403, 'You can only record attendance for your assigned classes.');
   try {
     const id = await transaction(async () => {
-      const info = await run('INSERT INTO attendance(student_id,teacher_id,attendance_date,session,status) VALUES(?,?,?,?,?)', studentId, req.user.id, date, sessionName.trim(), status);
-      await auditAction(req.user, 'recorded', 'attendance', info.lastInsertRowid, { student_id: studentId, status, date, session: sessionName.trim() });
+      const info = await run('INSERT INTO attendance(student_id,recorded_by,attendance_date,session,status) VALUES(?,?,?,?,?)', studentId, req.user.id, date, sessionName.trim(), status);
+      await auditAction(req.user, selfCheckIn ? 'self-checked-in' : 'recorded', 'attendance', info.lastInsertRowid, { student_id: studentId, status, date, session: sessionName.trim() });
       return info.lastInsertRowid;
     });
     res.status(201).json({ ok: true, id });
