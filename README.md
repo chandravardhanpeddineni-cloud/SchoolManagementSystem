@@ -4,15 +4,15 @@ SchoolDesk is a responsive school operations MVP built with React, Node.js, Expr
 
 ## What works
 
-- Role-based sign-in for administrator, teacher, and guardian accounts.
+- Role-based sign-in for administrator, teacher, and student accounts.
 - Student directory with admin student creation, role-scoped records, and search.
 - Daily attendance recording. A database uniqueness constraint prevents a second entry for the same student, date, and session.
 - Exam results with server-calculated grades and class checks.
-- Guardian-scoped report cards, attendance, and fee records.
+- Student-scoped report cards, attendance, and fee records.
 - Fee invoices, simulated payments, and transactional balance checks.
 - Dashboard summaries, audit records, and responsive loading, empty, success, and error states.
 
-Class, teacher, and subject setup screens, guardian account provisioning, recurring invoice generation, richer report filters, and a hosted demo are not included yet.
+Class, teacher, and subject setup screens, student account provisioning, recurring invoice generation, richer report filters, and a hosted demo are not included yet.
 
 ## Architecture
 
@@ -41,7 +41,7 @@ erDiagram
   STUDENTS ||--o{ INVOICES : billed
   INVOICES ||--o{ PAYMENTS : receives
   USERS ||--o{ AUDIT_LOG : performs
-  USERS }o--|| STUDENTS : guardian_of
+  USERS ||--o| STUDENTS : student_login_for
 ```
 
 Important integrity rules include unique student admission numbers, unique teacher/class assignments, a unique attendance tuple `(student_id, attendance_date, session)`, unique exam/student results, positive invoice/payment amounts, and foreign keys. Fee payments run in a transaction and cannot exceed the remaining invoice balance.
@@ -65,7 +65,7 @@ npm run build
 npm start
 ```
 
-The app creates `DB_NAME` if it does not exist, so the MySQL account needs permission to create a database. Otherwise create it once with `CREATE DATABASE my_backend CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;` and grant the configured account access. `SMS_DEMO_PASSWORD` changes the seeded demo password on the first initialization. Set a unique `SESSION_SECRET` and `NODE_ENV=production` before exposing the app outside localhost. Never commit `.env` or put real student data or payment credentials in the demo database.
+The app creates `DB_NAME` if it does not exist, so the MySQL account needs permission to create a database. Otherwise create it once with `CREATE DATABASE my_backend CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;` and grant the configured account access. On startup, existing guardian-role accounts are migrated to student-role accounts while retaining their linked student records. `SMS_DEMO_PASSWORD` changes the seeded demo password on the first initialization. Set a unique `SESSION_SECRET` and `NODE_ENV=production` before exposing the app outside localhost. Never commit `.env` or put real student data or payment credentials in the demo database.
 
 ## Demo accounts
 
@@ -75,8 +75,8 @@ All accounts use `school123` by default.
 | --- | --- | --- |
 | Administrator | `admin@school.test` | All seeded school records; can record payments |
 | Teacher | `teacher@school.test` | Grade 8 sections A and B; can record attendance and results |
-| Guardian | `guardian@school.test` | Aarav Sharma only |
-| Guardian | `guardian2@school.test` | Ananya Iyer only |
+| Student | `student@school.test` | Aarav Sharma only |
+| Student | `student2@school.test` | Ananya Iyer only |
 
 The data is synthetic. Seed records include a Grade 8 Mathematics assessment and a partially paid tuition invoice.
 
@@ -99,7 +99,7 @@ All API routes use JSON. Authenticated routes use an HTTP-only, same-site sessio
 | `POST /api/results` | Admin, teacher | `{exam_id,student_id,marks}`; upserts grade |
 | `GET /api/fees` | Signed in | Visible invoices with paid and due cents |
 | `POST /api/fees/:id/payments` | Admin | `{amount}` in rupees; simulated payment only |
-| `GET /api/report-card?student_id=` | Signed in | Report card; guardians are forced to their linked student |
+| `GET /api/report-card?student_id=` | Signed in | Report card; students are restricted to their linked record |
 
 ## Rules and grade bands
 
@@ -113,7 +113,7 @@ Attendance duplicates return HTTP 409. Payments run inside a transaction, reject
 npm test
 ```
 
-Integration tests use a temporary SQLite database and a local HTTP server, so they do not require MySQL. They cover teacher scope, duplicate attendance conflict, grade calculation, guardian privacy, and fee balance reconciliation. Configure `.env` before running the app to connect it to MySQL.
+Integration tests use a temporary SQLite database and a local HTTP server, so they do not require MySQL. They cover teacher scope, duplicate attendance conflict, grade calculation, student privacy, and fee balance reconciliation. Configure `.env` before running the app to connect it to MySQL.
 
 ## Known limitations
 
@@ -121,3 +121,4 @@ Integration tests use a temporary SQLite database and a local HTTP server, so th
 - No password reset, invite flow, production deployment, live payment integration, or real personal data is included.
 - The grading bands are an explicit demo policy and should be made configurable for a real school.
 - The demo calendar and chart presentation are sample UI content; their fuller live data screens are not implemented.
+- Each student account links to one student record. Guardian contact fields remain on student records, but guardian portal accounts are not provided.

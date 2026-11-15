@@ -23,11 +23,11 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(180) NOT NULL,
   email VARCHAR(254) NOT NULL UNIQUE,
   password_hash VARCHAR(100) NOT NULL,
-  role ENUM('admin','teacher','guardian') NOT NULL,
+  role ENUM('admin','teacher','student') NOT NULL,
   student_id INT UNSIGNED NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
   CONSTRAINT fk_users_student FOREIGN KEY(student_id) REFERENCES students(id),
-  CONSTRAINT chk_guardian_student CHECK(role <> 'guardian' OR student_id IS NOT NULL)
+  CONSTRAINT chk_student_link CHECK(role <> 'student' OR student_id IS NOT NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS teacher_classes (

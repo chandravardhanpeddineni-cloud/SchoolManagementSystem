@@ -106,6 +106,24 @@ async function initializeMysql() {
     await connection.ping();
     const statements = fs.readFileSync(path.join(__dirname, 'schema.mysql.sql'), 'utf8').split(';').map(s => s.trim()).filter(Boolean);
     for (const statement of statements) await connection.query(statement);
+    const [roleColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'role'");
+    if (roleColumns[0]?.Type?.includes('guardian')) {
+      await connection.query("ALTER TABLE users MODIFY role ENUM('admin','teacher','guardian','student') NOT NULL");
+      await connection.query(`UPDATE users u JOIN students s ON s.id=u.student_id
+        SET u.name=s.name,
+            u.email=CASE u.email
+              WHEN 'guardian@school.test' THEN 'student@school.test'
+              WHEN 'guardian2@school.test' THEN 'student2@school.test'
+              ELSE u.email
+            END
+        WHERE u.role='guardian'`);
+      await connection.query("UPDATE users SET role='student' WHERE role='guardian'");
+      await connection.query("ALTER TABLE users MODIFY role ENUM('admin','teacher','student') NOT NULL");
+    }
+    const [checks] = await connection.query("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='users' AND CONSTRAINT_TYPE='CHECK'");
+    const checkNames = new Set(checks.map(row => row.CONSTRAINT_NAME));
+    if (checkNames.has('chk_guardian_student')) await connection.query('ALTER TABLE users DROP CHECK chk_guardian_student');
+    if (!checkNames.has('chk_student_link')) await connection.query("ALTER TABLE users ADD CONSTRAINT chk_student_link CHECK(role <> 'student' OR student_id IS NOT NULL)");
   } finally { connection.release(); }
   await seed();
 }
@@ -133,8 +151,8 @@ async function seed() {
     const addUser = async (name,email,role,studentId=null) => (await run('INSERT INTO users(name,email,password_hash,role,student_id) VALUES(?,?,?,?,?)',name,email,bcrypt.hashSync(password,10),role,studentId)).lastInsertRowid;
     const adminId = await addUser('School Admin','admin@school.test','admin');
     const teacherId = await addUser('Priya Menon','teacher@school.test','teacher');
-    await addUser('Meera Sharma','guardian@school.test','guardian',studentIds['ST-2401']);
-    await addUser('Ravi Iyer','guardian2@school.test','guardian',studentIds['ST-2402']);
+    await addUser('Aarav Sharma','student@school.test','student',studentIds['ST-2401']);
+    await addUser('Ananya Iyer','student2@school.test','student',studentIds['ST-2402']);
     await run('INSERT INTO teacher_classes(teacher_id,class_id) VALUES(?,?)',teacherId,classIds['8A']);
     await run('INSERT INTO teacher_classes(teacher_id,class_id) VALUES(?,?)',teacherId,classIds['8B']);
     const today = new Date().toISOString().slice(0,10);

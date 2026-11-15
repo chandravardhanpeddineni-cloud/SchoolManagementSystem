@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS students (
 CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id);
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('admin','teacher','guardian')),
+  password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('admin','teacher','student')),
   student_id INTEGER REFERENCES students(id), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
-  CHECK((role='guardian' AND student_id IS NOT NULL) OR role!='guardian')
+  CHECK((role='student' AND student_id IS NOT NULL) OR role!='student')
 );
 CREATE TABLE IF NOT EXISTS teacher_classes (
   teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

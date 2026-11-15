@@ -71,17 +71,17 @@ test('administrator can add a student and duplicate admission numbers are reject
   assert.equal(duplicate.response.status,409);
 });
 
-test('guardian is restricted to the linked student and fee ledger reconciles',async()=>{
-  await login('guardian','guardian@school.test');
-  const students=await request('/api/students',{role:'guardian'});
+test('student is restricted to their own records and fee ledger reconciles',async()=>{
+  await login('student','student@school.test');
+  const students=await request('/api/students',{role:'student'});
   assert.equal(students.data.students.length,1);assert.equal(students.data.students[0].admission_no,'ST-2401');
-  const attempted=await request('/api/report-card?student_id=2',{role:'guardian'});
+  const attempted=await request('/api/report-card?student_id=2',{role:'student'});
   assert.equal(attempted.data.student.admission_no,'ST-2401');
-  const fee=await request('/api/fees',{role:'guardian'});
+  const fee=await request('/api/fees',{role:'student'});
   assert.equal(fee.data.invoices.length,1);assert.equal(fee.data.invoices[0].due_cents,75000);
   await login('admin','admin@school.test');
   const paid=await request(`/api/fees/${fee.data.invoices[0].id}/payments`,{role:'admin',method:'POST',body:{amount:750}});
   assert.equal(paid.response.status,201);assert.equal(paid.data.due_cents,0);
-  const refreshed=await request('/api/fees',{role:'guardian'});
+  const refreshed=await request('/api/fees',{role:'student'});
   assert.equal(refreshed.data.invoices[0].paid_cents+refreshed.data.invoices[0].due_cents,refreshed.data.invoices[0].amount_cents);
 });

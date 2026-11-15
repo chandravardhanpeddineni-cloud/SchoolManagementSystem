@@ -37,7 +37,7 @@ async function scopeClasses(user) {
   return student ? [Number(student.class_id)] : [];
 }
 async function studentsFor(user) {
-  if (user.role === 'guardian') return all("SELECT s.*,c.name||' - '||c.section AS class_name FROM students s JOIN classes c ON c.id=s.class_id WHERE s.id=?", user.student_id);
+  if (user.role === 'student') return all("SELECT s.*,c.name||' - '||c.section AS class_name FROM students s JOIN classes c ON c.id=s.class_id WHERE s.id=?", user.student_id);
   const scope = await scopeClasses(user);
   if (scope === null) return all("SELECT s.*,c.name||' - '||c.section AS class_name FROM students s JOIN classes c ON c.id=s.class_id ORDER BY s.name");
   if (!scope.length) return [];
@@ -159,9 +159,9 @@ app.get('/api/exams', auth, route(async (req, res) => {
   const where = scope === null ? '' : ` WHERE e.class_id IN (${scope.map(() => '?').join(',')})`;
   const exams = await all(`SELECT e.*,c.name||' - '||c.section class_name FROM exams e JOIN classes c ON c.id=e.class_id${where} ORDER BY e.exam_date DESC`, ...(scope || []));
   const resultRows = await Promise.all(exams.map(async exam => {
-    const guardianFilter = req.user.role === 'guardian' ? ' AND r.student_id=?' : '';
-    const params = req.user.role === 'guardian' ? [exam.id, req.user.student_id] : [exam.id];
-    const results = await all(`SELECT r.student_id,s.name,r.marks,r.grade FROM results r JOIN students s ON s.id=r.student_id WHERE r.exam_id=?${guardianFilter}`, ...params);
+    const studentFilter = req.user.role === 'student' ? ' AND r.student_id=?' : '';
+    const params = req.user.role === 'student' ? [exam.id, req.user.student_id] : [exam.id];
+    const results = await all(`SELECT r.student_id,s.name,r.marks,r.grade FROM results r JOIN students s ON s.id=r.student_id WHERE r.exam_id=?${studentFilter}`, ...params);
     return { ...exam, results };
   }));
   res.json({ exams: resultRows });
@@ -188,7 +188,7 @@ app.post('/api/results', auth, roles('admin', 'teacher'), route(async (req, res)
 async function feeRows(user) {
   let condition = '', params = [];
   const scope = await scopeClasses(user);
-  if (user.role === 'guardian') { condition = 'WHERE i.student_id=?'; params = [user.student_id]; }
+  if (user.role === 'student') { condition = 'WHERE i.student_id=?'; params = [user.student_id]; }
   else if (user.role === 'teacher') {
     if (!scope.length) return [];
     condition = `WHERE s.class_id IN (${scope.map(() => '?').join(',')})`;
@@ -222,11 +222,11 @@ app.post('/api/fees/:id/payments', auth, roles('admin'), route(async (req, res) 
 }));
 
 app.get('/api/report-card', auth, route(async (req, res) => {
-  let studentId = req.user.role === 'guardian' ? req.user.student_id : Number(req.query.student_id);
-  if (req.user.role !== 'guardian' && !studentId) studentId = (await studentsFor(req.user))[0]?.id;
+  let studentId = req.user.role === 'student' ? req.user.student_id : Number(req.query.student_id);
+  if (req.user.role !== 'student' && !studentId) studentId = (await studentsFor(req.user))[0]?.id;
   const student = await get("SELECT s.id,s.name,s.admission_no,c.name||' - '||c.section class_name FROM students s JOIN classes c ON c.id=s.class_id WHERE s.id=?", studentId);
   if (!student) return error(res, 404, 'Student not found.');
-  if (req.user.role !== 'guardian') {
+  if (req.user.role !== 'student') {
     const scope = await scopeClasses(req.user);
     const actual = await get('SELECT class_id FROM students WHERE id=?', studentId);
     if (scope !== null && !scope.includes(Number(actual.class_id))) return error(res, 403, 'You can only view assigned classes.');
